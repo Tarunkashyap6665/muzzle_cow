@@ -13,12 +13,24 @@ from PIL import Image
 from torchvision import transforms
 from PIL import Image
 import cv2
+import os
 
 app = FastAPI()
 
 @app.post("/uploadfile/")
 async def create_upload_file(file: UploadFile):
-    image_path = f"./images/{file.filename}"
+
+    # Define the directory paths
+    images_dir = "./images"
+    cropped_image_dir = "./cropped_image"
+
+    # Ensure the directories exist, if not create them
+    os.makedirs(images_dir, exist_ok=True)
+    os.makedirs(cropped_image_dir, exist_ok=True)
+
+    # Now you can proceed with your FastAPI application
+
+    image_path = f"{images_dir}/{file.filename}"
     with open(image_path,'wb') as f:
         contents=file.file.read()
         f.write(contents)
@@ -29,9 +41,9 @@ async def create_upload_file(file: UploadFile):
     weight='./model/weight/best.pt'
     # Create yolo model 
     model=YOLO(weight)
-    result=model.predict(source=image_path,conf=0.25, save=True)
+    result=model.predict(source=image_path,conf=0.25)
 
-    img = cv2.imread(f'./images/{file.filename}')
+    img = cv2.imread(f'{images_dir}/{file.filename}')
 
     # Extract bounding boxes
     boxes = result[0].boxes.xyxy.tolist()
@@ -42,7 +54,7 @@ async def create_upload_file(file: UploadFile):
         # Crop the object using the bounding box coordinates
         ultralytics_crop_object = img[int(y1):int(y2), int(x1):int(x2)]
         # Save the cropped object as an image
-        cv2.imwrite(f'./cropped_image/{file.filename}', ultralytics_crop_object)
+        cv2.imwrite(f'{cropped_image_dir}/{file.filename}', ultralytics_crop_object)
     
 
     # Load the model
@@ -53,7 +65,7 @@ async def create_upload_file(file: UploadFile):
   
 
     # Load the image using PIL
-    pil_image = Image.open(f'./cropped_image/{file.filename}')
+    pil_image = Image.open(f'{cropped_image_dir}/{file.filename}')
 
     # Ensure the image has 4 channels
     if pil_image.mode != 'RGB':
