@@ -16,3 +16,4 @@ ultralytics==8.0.196
 urllib3==2.1.0
 uvicorn==0.24.0.post1
 python-multipart
+gunicorn==22.0.0
