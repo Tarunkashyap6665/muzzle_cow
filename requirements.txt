@@ -5,15 +5,8 @@ numpy==1.24.1
 opencv-python==4.9.0.80
 tensorflow==2.16.1
 torch
-torch-tb-profiler==0.4.3
-torchaudio
-torchinfo==1.8.0
-torchmetrics
 torchvision
-tqdm==4.66.1
-tzdata==2023.4
 ultralytics==8.0.196
-urllib3==2.1.0
 uvicorn==0.24.0.post1
 python-multipart
 gunicorn==22.0.0

@@ -14,16 +14,22 @@ from torchvision import transforms
 from PIL import Image
 import cv2
 import os
+from fastapi.responses import FileResponse
+from fastapi.staticfiles import StaticFiles
 
 app = FastAPI()
 
+# Mount a directory containing images
+app.mount("/cropped_image", StaticFiles(directory="cropped_image"), name="cropped_image")
+
 @app.post("/uploadfile/")
-async def create_upload_file(file: UploadFile):
-    try:
+async def create_upload_file(uniqueID:str,file: UploadFile):
+    # try:
 
         # Define the directory paths
-        images_dir = "./images"
-        cropped_image_dir = "./cropped_image"
+        images_dir = f"./images/{uniqueID}"
+        path=f"cropped_image/{uniqueID}"
+        cropped_image_dir = f"./{path}"
 
         # Ensure the directories exist, if not create them
         os.makedirs(images_dir, exist_ok=True)
@@ -102,6 +108,7 @@ async def create_upload_file(file: UploadFile):
 
         # Print the predicted class
 
-        return {"predicted_class":str(predicted_class)}
-    except Exception:
-        return {"error":"Face not detected"}
+
+        return {"predicted_class":str(predicted_class),"cropped_image":FileResponse(f'{path}/{file.filename}', media_type="image/jpeg")}
+    # except Exception:
+    #     return {"error":"Face not detected"}
