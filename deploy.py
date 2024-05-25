@@ -14,21 +14,41 @@ from torchvision import transforms
 from PIL import Image
 import cv2
 import os
+import tensorflow as tf
 from fastapi.responses import FileResponse
+from pathlib import Path
 from fastapi.staticfiles import StaticFiles
+from fastapi.middleware.cors import CORSMiddleware
+from pydantic import BaseModel
+
+class UploadFileRequest(BaseModel):
+    uniqueID: str
+    file: UploadFile
+
+tf.config.set_visible_devices([],"GPU")
 
 app = FastAPI()
+# Allow your frontend origin for development
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
 
 # Mount a directory containing images
 app.mount("/cropped_image", StaticFiles(directory="cropped_image"), name="cropped_image")
 
 @app.post("/uploadfile/")
-async def create_upload_file(uniqueID:str,file: UploadFile):
+async def create_upload_file(file: UploadFile):
     # try:
 
         # Define the directory paths
-        images_dir = f"./images/{uniqueID}"
-        path=f"cropped_image/{uniqueID}"
+        images_dir = f"./images"
+        path=f"cropped_image"
         cropped_image_dir = f"./{path}"
 
         # Ensure the directories exist, if not create them
@@ -48,21 +68,21 @@ async def create_upload_file(uniqueID:str,file: UploadFile):
         weight='./model/weight/best.pt'
         # Create yolo model 
         model=YOLO(weight)
-        result=model.predict(source=image_path,conf=0.25)
+        result=model.predict(source=image_path,conf=0.6, save=True)
 
         img = cv2.imread(f'{images_dir}/{file.filename}')
 
         # Extract bounding boxes
         boxes = result[0].boxes.xyxy.tolist()
-
-        # Iterate through the bounding boxes
+      
+            # Iterate through the bounding boxes
         for i, box in enumerate(boxes):
             x1, y1, x2, y2 = box
             # Crop the object using the bounding box coordinates
             ultralytics_crop_object = img[int(y1):int(y2), int(x1):int(x2)]
             # Save the cropped object as an image
             cv2.imwrite(f'{cropped_image_dir}/{file.filename}', ultralytics_crop_object)
-
+        
 
         # Load the model
         keras_model = load_model('./model/image_classifier_model1.h5')
@@ -70,9 +90,12 @@ async def create_upload_file(uniqueID:str,file: UploadFile):
 
 
     
-
-        # Load the image using PIL
-        pil_image = Image.open(f'{cropped_image_dir}/{file.filename}')
+        try:
+            # Load the image using PIL
+            pil_image = Image.open(f'{cropped_image_dir}/{file.filename}')
+        except:
+             print("Muzzle Not Detected")
+             return {"error":"Muzzle not detected. Recapture the image","status":404}
 
         # Ensure the image has 4 channels
         if pil_image.mode != 'RGB':
@@ -112,3 +135,8 @@ async def create_upload_file(uniqueID:str,file: UploadFile):
         return {"predicted_class":str(predicted_class),"cropped_image":FileResponse(f'{path}/{file.filename}', media_type="image/jpeg")}
     # except Exception:
     #     return {"error":"Face not detected"}
+
+@app.post("/")
+def index(upload_request: UploadFileRequest):
+    print(upload_request)
+    return {"uid":upload_request}
